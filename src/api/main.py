@@ -13,12 +13,14 @@ from src.service.audit_service import AuditService
 from src.exception.exceptions import ValidationError
 from src.service.orchestrator import RiskOrchestrator
 from src.middleware.correlation import add_correlation_id, get_cid
+from src.service.metrics_service import MetricsService
 
 setup_logging()
 logger = logging.getLogger("loan-api")
 
 app = FastAPI(title="Loan Risk Inference API")
 
+metrices_service = MetricsService()
 
 @app.middleware("http")
 async def log_requests(request: Request, call_next):
@@ -35,6 +37,10 @@ async def log_requests(request: Request, call_next):
 
 app.middleware("http")(add_correlation_id)
 
+@app.get("/health")
+async def health_check():
+    return {"status": "healthy"}
+
 @app.post("/evaluate-risk")
 async def evaluate_risk(
     request: LoanRequest,
@@ -42,6 +48,7 @@ async def evaluate_risk(
     orchestrator: RiskOrchestrator = Depends(get_risk_orchestrator),
     cid: str = Depends(get_cid)
 ):
+    start_time = time.time()
     try:
         AuditService.log_request(request, cid)
         LoanValidator.validate(request)
@@ -50,8 +57,12 @@ async def evaluate_risk(
         if enriched_result["fraud_probability"] > 0.7:
             enriched_result["recommendation"] = "Manual Review Required"
         AuditService.log_response(enriched_result, cid)
+        process_time = round(time.time() - start_time, 4)
+        metrices_service.record_request(process_time, enriched_result)
         return wrap_response(enriched_result, cid)
     except ValidationError as ve:
+        process_time = round(time.time() - start_time, 4)
+        metrices_service.error_count(process_time)
         raise HTTPException(status_code=400, detail=str(ve))
 
 @app.exception_handler(Exception)
@@ -74,3 +85,7 @@ def wrap_response(data: Any = None, cid: Any = None) -> dict:
         "correlation_id": cid,
         "data": data
     }
+
+@app.get("/metrics")
+async def metrics():
+    return metrices_service.get_metrics()
