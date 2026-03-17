@@ -7,4 +7,4 @@ Run : python -m uvicorn src.api.main:app --reload
 Open : http://127.0.0.1:8000/docs
 Will get Swagger UI automatically.
 
---todo--
+--todo---
