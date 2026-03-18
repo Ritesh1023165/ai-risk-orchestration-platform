@@ -14,6 +14,10 @@ from src.exception.exceptions import ValidationError
 from src.service.orchestrator import RiskOrchestrator
 from src.middleware.correlation import add_correlation_id, get_cid
 from src.service.metrics_service import MetricsService
+<<<<<<< Updated upstream
+=======
+from src.ai.llm_service import explain_risk
+>>>>>>> Stashed changes
 
 setup_logging()
 logger = logging.getLogger("loan-api")
@@ -56,14 +60,33 @@ async def evaluate_risk(
         enriched_result = await orchestrator.enrich(applicant_id=1, base_result=result)
         if enriched_result["fraud_probability"] > 0.7:
             enriched_result["recommendation"] = "Manual Review Required"
+        enriched_result["explanation"] = explain_risk(request.model_dump, enriched_result["fraud_probability"], enriched_result["recommendation"])
         AuditService.log_response(enriched_result, cid)
         process_time = round(time.time() - start_time, 4)
         metrices_service.record_request(process_time, enriched_result)
+<<<<<<< Updated upstream
+=======
+        
+>>>>>>> Stashed changes
         return wrap_response(enriched_result, cid)
     except ValidationError as ve:
         process_time = round(time.time() - start_time, 4)
         metrices_service.error_count(process_time)
         raise HTTPException(status_code=400, detail=str(ve))
+
+@app.exception_handler(ValidationError)
+async def validation_exception_handler(request: Request, exc: ValidationError):
+    logger.error(f"Validation error: {str(exc)} | Correlation-ID: {getattr(request.state, "correlation_id", "unknown")}")
+
+    return JSONResponse(
+        status_code=400,
+        content={
+            "status": "error",
+            "correlation_id": getattr(request.state, "correlation_id", "unknown"),
+            "error": "Internal Server Error",
+            "detail": str(exc)
+        },
+    )
 
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception):

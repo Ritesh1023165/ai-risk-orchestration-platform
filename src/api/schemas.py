@@ -17,3 +17,4 @@ class LoanResponse(BaseModel):
     fraud_probability: float
     macro_risk_index: float
     recommendation: str
+    explanation: str
