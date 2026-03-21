@@ -14,10 +14,7 @@ from src.exception.exceptions import ValidationError
 from src.service.orchestrator import RiskOrchestrator
 from src.middleware.correlation import add_correlation_id, get_cid
 from src.service.metrics_service import MetricsService
-<<<<<<< Updated upstream
-=======
 from src.ai.llm_service import explain_risk
->>>>>>> Stashed changes
 
 setup_logging()
 logger = logging.getLogger("loan-api")
@@ -64,10 +61,6 @@ async def evaluate_risk(
         AuditService.log_response(enriched_result, cid)
         process_time = round(time.time() - start_time, 4)
         metrices_service.record_request(process_time, enriched_result)
-<<<<<<< Updated upstream
-=======
-        
->>>>>>> Stashed changes
         return wrap_response(enriched_result, cid)
     except ValidationError as ve:
         process_time = round(time.time() - start_time, 4)
